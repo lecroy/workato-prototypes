@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Onboarding Genie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --text-primary: #373d47;
+  --text-secondary: #454e5b;
+  --surface-elevated: #ffffff;
+  --surface-opacity-70: rgba(255,255,255,0.7);
+  --surface-inverse-3: rgba(19,52,64,0.03);
+  --border-subtle: #e5eaf1;
+  --border-default: #d5dbe4;
+  --border-gloss: #ffffff;
+  --neutral-fg: #454e5b;
+  --neutral-dark-8: rgba(26,29,33,0.08);
+  --neutral-dark-3: rgba(26,29,33,0.03);
+  --accent: #454e5b;
+  --fg-on-accent: #ffffff;
+  --teal-tint: #eef8fa;
+  --teal-fg: #065f69;
+  --violet-border: #d3abe7;
+  --violet-bg: rgba(234,206,247,0.5);
+  --violet-fg: #703199;
+  --orange-border: #ffbb75;
+  --orange-bg: rgba(255,226,193,0.5);
+  --orange-fg: #bd5200;
+  --blue-border: #8fc1f1;
+  --blue-bg: rgba(200,226,248,0.5);
+  --blue-fg: #0d4e9e;
+  --indigo-border: #b7baea;
+  --indigo-bg: rgba(218,218,251,0.5);
+  --indigo-fg: #5d69b6;
+  --indigo-emphasis: #434e95;
+  --surface-alt: #e5eaf1;
+}
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  font-family: 'Source Sans 3', sans-serif;
+  background: #f0f2f5;
+}
+
+/* ─────────────────────────────────────────────
+   RECIPE EDITOR SHELL
+───────────────────────────────────────────── */
+.recipe-editor {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--border-gloss);
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  background-image:
+    linear-gradient(180deg, rgba(229,234,241,0.2) 0%, rgba(200,200,255,0.2) 100%),
+    url('https://www.figma.com/api/mcp/asset/a964a95f-f8db-48fa-b8f7-75270fd65109');
+  background-size: auto, 30px 30px;
+  background-position: top left;
+}
+
+/* ─────────────────────────────────────────────
+   HEADER  (floats above canvas, z-index 10)
+───────────────────────────────────────────── */
+.re-header {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;           /* zero-height trick: content overflows visually */
+  z-index: 10;
+}
+.re-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+/* title card */
+.title-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px var(--neutral-dark-8), 4px 8px 20px var(--neutral-dark-3);
+  flex-shrink: 0;
+}
+.genie-avatar {
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  background: #e3e3ff;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; flex-shrink: 0;
+}
+.genie-avatar img { width: 73%; height: 73%; object-fit: contain; }
+.title-label {
+  padding: 4px 8px;
+  font-size: 14px; font-weight: 600; line-height: 20px;
+  color: var(--text-primary); white-space: nowrap;
+}
+
+/* action card */
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px var(--neutral-dark-8), 4px 8px 20px var(--neutral-dark-3);
+  flex-shrink: 0;
+}
+.btn-primary {
+  display: flex; align-items: center;
+  height: 24px; padding: 4px 8px;
+  background: var(--accent); border: 1px solid var(--accent);
+  border-radius: 4px; cursor: pointer;
+  font-family: inherit; font-size: 12px; font-weight: 600; line-height: 16px;
+  color: var(--fg-on-accent); white-space: nowrap;
+}
+.divider-v { width: 1px; height: 16px; background: var(--border-subtle); border-radius: 1px; flex-shrink: 0; }
+.btn-flat {
+  display: flex; align-items: center; gap: 4px;
+  height: 24px; padding: 4px 8px; border-radius: 4px; cursor: pointer;
+  font-family: inherit; font-size: 12px; font-weight: 600; line-height: 16px;
+  color: var(--neutral-fg); white-space: nowrap;
+}
+.btn-flat img { width: 8px; height: 8px; object-fit: contain; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────────
+   CANVAS  (scrollable)
+───────────────────────────────────────────── */
+.re-canvas {
+  position: absolute;
+  inset: 0 0 68px 0;   /* leave room for footer */
+  overflow: auto;
+}
+
+/* the entire workflow sits inside this absolute box */
+.workflow {
+  position: absolute;
+  left: 136px; top: 106px;
+  width: 1500px; height: 1140px;
+}
+
+/* ─────────────────────────────────────────────
+   GENIE CARDS  (shared styles)
+───────────────────────────────────────────── */
+.card {
+  position: absolute;
+  border: 1px solid;
+  border-radius: 16px;
+  display: flex; flex-direction: column;
+  padding: 1px;
+}
+.card.indigo  { background: var(--indigo-bg); border-color: var(--indigo-border); }
+.card.violet  { background: var(--violet-bg); border-color: var(--violet-border); }
+.card.orange  { background: var(--orange-bg); border-color: var(--orange-border); }
+.card.blue    { background: var(--blue-bg);   border-color: var(--blue-border);   }
+
+/* inner white area */
+.card-body {
+  background: var(--surface-opacity-70);
+  border-radius: 15px;
+  display: flex; align-items: center;
+  padding: 12px 8px; gap: 8px;
+  flex-shrink: 0; width: 100%;
+}
+.card-body.col {
+  flex-direction: column; align-items: flex-start;
+  padding: 12px 16px; gap: 8px;
+}
+
+/* app icon */
+.app-icon {
+  width: 28px; height: 28px;
+  border-radius: 4.667px; flex-shrink: 0;
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  border: 0.778px solid rgba(151,161,178,0.2);
+}
+.app-icon img { width: 65%; height: 65%; object-fit: contain; }
+.app-icon.confluence { background: #0052cc; }
+
+/* card text */
+.card-text {
+  font-size: 14px; font-weight: 400; line-height: 20px;
+  color: var(--text-primary); white-space: nowrap;
+}
+.card-text .lo { color: #5d69b6; }
+
+/* card footer label */
+.card-foot {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; padding: 4px 16px;
+  flex-shrink: 0; width: 100%;
+}
+.tag {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; line-height: 16px;
+}
+.tag img { width: 10px; height: 10px; object-fit: contain; flex-shrink: 0; }
+.tag.skill       { color: var(--violet-fg); }
+.tag.mcp         { color: var(--orange-fg); }
+.tag.document    { color: var(--blue-fg); }
+.tag.instruction { color: var(--indigo-emphasis); }
+
+/* node connector dot */
+.node-dot {
+  position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px;
+}
+.node-dot img { width: 100%; height: 100%; }
+
+/* ─────────────────────────────────────────────
+   INSTRUCTION CARD  (large indigo, top center)
+───────────────────────────────────────────── */
+.inst-header {
+  display: flex; align-items: center; flex-shrink: 0;
+}
+.inst-avatar {
+  width: 39.661px; height: 39.661px; border-radius: 5.666px;
+  background: #e3e3ff; flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.inst-avatar img { width: 73%; height: 73%; object-fit: contain; }
+.inst-title {
+  padding: 5.666px 11.332px;
+  font-size: 19.83px; font-weight: 600; line-height: 28.329px;
+  color: var(--text-primary); white-space: nowrap;
+}
+.inst-input {
+  background: var(--surface-inverse-3);
+  height: 204px; overflow: hidden;
+  border-radius: 8px 8px 0 0; width: 100%; flex-shrink: 0;
+}
+.inst-input-inner { padding: 4px 8px; overflow: hidden; }
+.inst-text {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px; font-weight: 400; line-height: 16px;
+  color: var(--indigo-fg);
+}
+.inst-text p + p { margin-top: 12px; }
+.inst-text .dark { color: #24434f; }
+
+/* small instructions card */
+.small-inst-input {
+  background: var(--surface-inverse-3);
+  height: 88px; overflow: hidden;
+  border-radius: 8px 8px 0 0; width: 100%; flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────
+   ARROWS
+───────────────────────────────────────────── */
+.arrow { position: absolute; pointer-events: none; }
+.arrow img { display: block; max-width: none; width: 100%; height: 100%; }
+
+/* ─────────────────────────────────────────────
+   RECIPE STEP
+───────────────────────────────────────────── */
+.recipe-step {
+  position: absolute;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; min-height: 48px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default); border-radius: 8px;
+}
+.step-app-icon {
+  width: 36px; height: 36px; border-radius: 6px;
+  overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(151,161,178,0.2);
+}
+.step-app-icon img { width: 65%; height: 65%; object-fit: contain; }
+.step-app-icon.jira { background: #0052cc; }
+.step-content { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.then-tag {
+  display: flex; align-items: center;
+  height: 24px; padding: 2px 6px; flex-shrink: 0;
+  background: var(--teal-tint); border: 1px solid rgba(151,161,178,0.2); border-radius: 4px;
+  font-size: 12px; font-weight: 600; color: var(--teal-fg);
+}
+.step-text { font-size: 14px; font-weight: 400; line-height: 20px; color: var(--text-primary); white-space: nowrap; }
+.step-text .lo { color: #5d69b6; }
+.step-badge {
+  position: absolute; top: -1px; right: -1px;
+  background: var(--surface-alt); border-radius: 0 7px 0 4px;
+  padding: 2px 4px; min-width: 17px; text-align: center;
+  font-family: 'Source Code Pro', monospace; font-size: 8px; font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* + add button */
+.add-btn {
+  position: absolute;
+  width: 32px; height: 32px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.add-btn img { width: 10px; height: 10px; object-fit: contain; }
+
+/* ─────────────────────────────────────────────
+   FOOTER TOOLBAR
+───────────────────────────────────────────── */
+.re-footer {
+  position: absolute;
+  inset: auto 0 0 0; height: 68px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+}
+
+.toolbar {
+  display: flex; align-items: center;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle); border-radius: 12px;
+  box-shadow: 0 4px 8px var(--neutral-dark-8), 4px 8px 20px var(--neutral-dark-3);
+}
+.toolbar-section { display: flex; align-items: center; gap: 8px; padding: 6px; }
+.toolbar-item {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 600; line-height: 20px;
+  color: var(--text-primary); white-space: nowrap;
+}
+.toolbar-item:hover { background: rgba(0,0,0,0.04); }
+.toolbar-icon { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.toolbar-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.toolbar-divider { width: 1px; height: 28px; background: var(--border-subtle); flex-shrink: 0; }
+
+/* AIRO widget */
+.airo-widget {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 600; color: var(--text-primary);
+}
+.airo-mark { width: 16px; height: 16px; flex-shrink: 0; position: relative; }
+.airo-mark img {
+  position: absolute;
+  inset: 6% 0.02% 6% -0.02%;
+  max-width: none; width: 100%; height: 88%; object-fit: contain;
+}
+
+/* zoom controls */
+.zoom-controls {
+  position: absolute; right: 12px; top: 12px;
+  display: flex; align-items: center;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle); border-radius: 12px;
+  box-shadow: 0 4px 8px var(--neutral-dark-8), 4px 8px 20px var(--neutral-dark-3);
+}
+.zoom-section { display: flex; align-items: center; padding: 6px; }
+.zoom-btn {
+  display: flex; align-items: center; justify-content: center;
+  height: 32px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 600; color: var(--text-primary);
+  min-width: 32px;
+}
+</style>
+</head>
+<body>
+<div class="recipe-editor">
+
+  <!-- ── HEADER ─────────────────────────────────────────────── -->
+  <div class="re-header">
+    <div class="re-header-inner">
+
+      <div class="title-card">
+        <div class="genie-avatar">
+          <img src="https://www.figma.com/api/mcp/asset/db96c3c0-0ef5-4ef0-bd4a-4860e8d6d339" alt="">
+        </div>
+        <span class="title-label">Onboarding Genie</span>
+      </div>
+
+      <div class="action-card">
+        <button class="btn-primary">Start genie</button>
+        <div class="divider-v"></div>
+        <button class="btn-flat">
+          <img src="https://www.figma.com/api/mcp/asset/b1257ae0-271a-47fd-9bfb-1ba6dd2f9bd8" alt="">
+          Test chat
+        </button>
+        <button class="btn-flat">
+          <img src="https://www.figma.com/api/mcp/asset/84a619b4-89e4-4a0b-9eb3-5f22f288d5e4" alt="">
+          Exit
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── CANVAS ─────────────────────────────────────────────── -->
+  <div class="re-canvas">
+    <div class="workflow">
+
+      <!-- LARGE INSTRUCTION CARD  left=488 top=3 w=608 -->
+      <div class="card indigo" style="left:488px;top:3px;width:608px">
+        <div class="card-body col">
+          <div class="inst-header">
+            <div class="inst-avatar">
+              <img src="https://www.figma.com/api/mcp/asset/3e459225-7df9-4bc1-aa3e-19737f722d5a" alt="">
+            </div>
+            <span class="inst-title">Onboarding Genie</span>
+          </div>
+          <div class="inst-input">
+            <div class="inst-input-inner">
+              <div class="inst-text">
+                <p>You are a friendly and knowledgeable onboarding assistant for new employees joining the company. When a new hire is triggered in the system, proactively help them navigate their first days by answering questions about company processes, culture, and policies, surfacing relevant documentation and resources based on their role and department, guiding them through required onboarding tasks such as completing paperwork, setting up their profile, and booking mandatory training, and flagging anything that needs human follow-up to their manager or HR. Use the new hire's role, department, seniority, and location to personalise your responses — a junior engineer joining remotely has very different needs from a senior sales hire joining on-site. You are conversational, warm, and proactive: don't wait to be asked, surface what the new hire is most likely to need next.</p>
+                <p>Who will need my help?<br>
+                The genie is an IT Support Assistant specializing in resolving common user issues such as password resets, application access, and basic hardware troubleshooting. Its goal is to deliver fast, clear, and reliable support while minimizing downtime and confusion for users.</p>
+                <p class="dark">How do I get things done?<br>
+                1. Gather specific details about the issue including error messages, affected systems, and when the problem started<br>
+                2. Verify the user's identity and access permissions before making any account changes<br>
+                3. Walk through basic troubleshooting steps appropriate to the user's technical level</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-foot">
+          <div class="tag instruction">
+            <img src="https://www.figma.com/api/mcp/asset/7c0778ce-63b8-4999-8478-8649d03c4c08" alt="">
+            Genie instructions
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- SMALL INSTRUCTIONS CARD  left=4 top=372 w=260 -->
+      <div class="card indigo" style="left:4px;top:372px;width:260px">
+        <div class="card-body col" style="padding:12px 16px">
+          <div class="small-inst-input">
+            <div class="inst-input-inner">
+              <div class="inst-text">
+                <p>Use this when user asks to do something something something something something something something something something something</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-foot">
+          <div class="tag instruction">
+            <img src="https://www.figma.com/api/mcp/asset/7c0778ce-63b8-4999-8478-8649d03c4c08" alt="">
+            Genie instructions
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- SKILL CARD 1  left=4 top=530 w=261 -->
+      <div class="card violet" style="left:4px;top:530px;width:261px">
+        <div class="card-body">
+          <div class="app-icon" style="background:#fff">
+            <img src="https://www.figma.com/api/mcp/asset/b71721c3-ce80-4f14-b39e-247c25a71751" alt="Google Calendar">
+          </div>
+          <span class="card-text">Create <span class="lo">event</span> in <span class="lo">Google Calendar</span></span>
+        </div>
+        <div class="card-foot">
+          <div class="tag skill">
+            <img src="https://www.figma.com/api/mcp/asset/8b893de0-e244-4d7b-90e7-c0b698e8d1cb" alt="">
+            Skill
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- SKILL CARD 2  left=326 top=371 w=261 -->
+      <div class="card violet" style="left:326px;top:371px;width:261px">
+        <div class="card-body">
+          <div class="app-icon" style="background:#fff">
+            <img src="https://www.figma.com/api/mcp/asset/b71721c3-ce80-4f14-b39e-247c25a71751" alt="Google Calendar">
+          </div>
+          <span class="card-text">Create <span class="lo">event</span> in <span class="lo">Google Calendar</span></span>
+        </div>
+        <div class="card-foot">
+          <div class="tag skill">
+            <img src="https://www.figma.com/api/mcp/asset/8b893de0-e244-4d7b-90e7-c0b698e8d1cb" alt="">
+            Skill
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- SKILL CARD 3  left=4 top=642 w=261 -->
+      <div class="card violet" style="left:4px;top:642px;width:261px">
+        <div class="card-body">
+          <div class="app-icon" style="background:#fff">
+            <img src="https://www.figma.com/api/mcp/asset/b71721c3-ce80-4f14-b39e-247c25a71751" alt="Google Calendar">
+          </div>
+          <span class="card-text">Create <span class="lo">event</span> in <span class="lo">Google Calendar</span></span>
+        </div>
+        <div class="card-foot">
+          <div class="tag skill">
+            <img src="https://www.figma.com/api/mcp/asset/8b893de0-e244-4d7b-90e7-c0b698e8d1cb" alt="">
+            Skill
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- JIRA MCP CARD  center: left=657 top=371 w=261 -->
+      <!-- Figma: left=calc(50%+37.5px) with -translate-x-1/2, on 1500px wide → 50%=750, +37.5=787.5, -130.5=657 -->
+      <div class="card orange" style="left:657px;top:371px;width:261px">
+        <div class="card-body col">
+          <span class="card-text" style="font-size:14px;white-space:nowrap">Jira management MCP server</span>
+          <div style="font-size:12px;line-height:20px;color:var(--text-primary)">
+            <div>Create ticket</div>
+            <div>Search issues</div>
+            <div>Reassign issue</div>
+            <div>Mark issue priority</div>
+          </div>
+        </div>
+        <div class="card-foot">
+          <div class="tag mcp">
+            <img src="https://www.figma.com/api/mcp/asset/35e781f3-cd7c-4f3f-898c-c3774bf51eb5" alt="">
+            MCP Server
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- ORGANIZATION CHART CARD  left=979 top=371 w=261 -->
+      <div class="card blue" style="left:979px;top:371px;width:261px">
+        <div class="card-body">
+          <div class="app-icon" style="background:#fff;border:0.778px solid #d5dbe4">
+            <img src="https://www.figma.com/api/mcp/asset/2f8935b7-57dd-4be6-b9c5-c8a419de2304" alt="org chart">
+          </div>
+          <span class="card-text">Organization chart</span>
+        </div>
+        <div class="card-foot">
+          <div class="tag document">
+            <img src="https://www.figma.com/api/mcp/asset/7f30c7e1-2a51-42bc-8748-8e65db95dfdc" alt="">
+            Document
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- CONFLUENCE SPACES CARD  left=1289 top=371 w=261 -->
+      <div class="card blue" style="left:1289px;top:371px;width:261px">
+        <div class="card-body">
+          <div class="app-icon confluence">
+            <img src="https://www.figma.com/api/mcp/asset/6da50a24-6631-4085-b284-4a6ac8d83f91" alt="Confluence">
+          </div>
+          <span class="card-text">Confluence spaces</span>
+        </div>
+        <div class="card-foot">
+          <div class="tag document">
+            <img src="https://www.figma.com/api/mcp/asset/7f30c7e1-2a51-42bc-8748-8e65db95dfdc" alt="">
+            Synced data source
+          </div>
+        </div>
+        <div class="node-dot"><img src="https://www.figma.com/api/mcp/asset/66a91320-4f24-414b-aef7-41be475cdb84" alt=""></div>
+      </div>
+
+      <!-- ── ARROWS ───────────────────────────────────────────── -->
+
+      <!-- vertical middle arrow (straight down from instruction card) -->
+      <!-- left=791.5 top=300, rotate 90° -->
+      <div style="position:absolute;left:791.5px;top:300px;width:0;height:68px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="transform:rotate(90deg);flex:none;width:68px;height:0;position:relative">
+          <img src="https://www.figma.com/api/mcp/asset/b85e50d0-633f-4b25-a876-7ab998f67da7" alt=""
+               style="position:absolute;top:-2.82px;right:-0.56%;bottom:-2.82px;left:0;display:block;max-width:none;width:calc(100% + 0.56%);height:calc(100% + 5.64px)">
+        </div>
+      </div>
+
+      <!-- bent arrow → right (to Org chart + Confluence) left=792 top=300 w=636 h=68 -->
+      <div style="position:absolute;left:792px;top:300px;width:636px;height:68px;pointer-events:none">
+        <img src="https://www.figma.com/api/mcp/asset/1c50c3d0-58ed-4742-bd30-4ff60bbcf39a" alt=""
+             style="position:absolute;top:-0.56%;right:-0.44%;bottom:-0.56%;left:-0.44%;max-width:none;width:calc(100% + 0.88%);height:calc(100% + 1.12%);display:block">
+      </div>
+
+      <!-- bent arrow → center-right (to MCP) left=792 top=300 w=320 h=68 -->
+      <div style="position:absolute;left:792px;top:300px;width:320px;height:68px;pointer-events:none">
+        <img src="https://www.figma.com/api/mcp/asset/a5722baa-9eef-4ca4-b605-b3a7a1d055af" alt=""
+             style="position:absolute;top:0;right:-0.88%;bottom:-0.56%;left:-0.12%;max-width:none;width:calc(100% + 1%);height:calc(100% + 0.56%);display:block">
+      </div>
+
+      <!-- bent arrow ← left (to skill cards on left) left=132 top=300 w=660 h=68 -->
+      <div style="position:absolute;left:132px;top:300px;width:660px;height:68px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="transform:scaleY(-1) rotate(180deg);flex:none;width:660px;height:68px;position:relative">
+          <img src="https://www.figma.com/api/mcp/asset/18ce3bcd-c3b9-4596-8572-c40a6a8ea5b7" alt=""
+               style="position:absolute;top:0;right:-0.43%;bottom:-0.56%;left:0;max-width:none;width:calc(100% + 0.43%);height:calc(100% + 0.56%);display:block">
+        </div>
+      </div>
+
+      <!-- bent arrow ← center-left (to skill card 2) left=454 top=300 w=338 h=68 -->
+      <div style="position:absolute;left:454px;top:300px;width:338px;height:68px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="transform:scaleY(-1) rotate(180deg);flex:none;width:338px;height:68px;position:relative">
+          <img src="https://www.figma.com/api/mcp/asset/553135bc-89d0-41c6-9cb8-9b9dba339af2" alt=""
+               style="position:absolute;top:0;right:-0.84%;bottom:-0.56%;left:-0.11%;max-width:none;width:calc(100% + 0.95%);height:calc(100% + 0.56%);display:block">
+        </div>
+      </div>
+
+      <!-- vertical line  top=976 -->
+      <div style="position:absolute;left:559px;top:976px;width:0;height:32px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="transform:rotate(-90deg);flex:none;width:32px;height:0;position:relative">
+          <img src="https://www.figma.com/api/mcp/asset/900ce513-4247-45ef-b9b1-f81af7593b4e" alt=""
+               style="position:absolute;top:-3.68px;right:-8.33%;bottom:-3.68px;left:-1.56%;display:block;max-width:none;width:calc(100% + 9.89%);height:calc(100% + 7.36px)">
+        </div>
+      </div>
+
+      <!-- vertical line  top=1073 -->
+      <div style="position:absolute;left:559px;top:1073px;width:0;height:32px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="transform:rotate(-90deg);flex:none;width:32px;height:0;position:relative">
+          <img src="https://www.figma.com/api/mcp/asset/900ce513-4247-45ef-b9b1-f81af7593b4e" alt=""
+               style="position:absolute;top:-3.68px;right:-8.33%;bottom:-3.68px;left:-1.56%;display:block;max-width:none;width:calc(100% + 9.89%);height:calc(100% + 7.36px)">
+        </div>
+      </div>
+
+      <!-- connector node dot  left=556 top=1010 -->
+      <div style="position:absolute;left:556px;top:1010px;width:6px;height:6px">
+        <img src="https://www.figma.com/api/mcp/asset/a31409f6-97e4-4c9f-8b22-a4da0416db65" alt="" style="width:100%;height:100%">
+      </div>
+
+      <!-- ── RECIPE STEP  left=402 top=1013 w=298 ─────────── -->
+      <div class="recipe-step" style="left:402px;top:1013px;width:298px">
+        <div class="step-app-icon jira">
+          <img src="https://www.figma.com/api/mcp/asset/32950f72-1d68-4b6c-b137-311658b7b265" alt="Jira">
+        </div>
+        <div class="step-content">
+          <span class="then-tag">THEN</span>
+          <span class="step-text">Create <span class="lo">issue</span> in <span class="lo">Jira</span></span>
+        </div>
+        <div class="step-badge">2</div>
+      </div>
+
+      <!-- ADD BUTTON  left=543 top=1108 -->
+      <div class="add-btn" style="left:543px;top:1108px">
+        <img src="https://www.figma.com/api/mcp/asset/24716e70-d34f-45f8-9afe-87845c2d956b" alt="+">
+      </div>
+
+    </div><!-- /workflow -->
+  </div><!-- /re-canvas -->
+
+  <!-- ── FOOTER ─────────────────────────────────────────────── -->
+  <div class="re-footer">
+    <div class="toolbar">
+      <div class="toolbar-section">
+        <div class="toolbar-item">
+          <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/5a190142-4996-46d3-9b7d-6a3fba70d89c" alt=""></div>
+          Instruction
+        </div>
+        <div class="toolbar-item">
+          <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/e41f5cb6-6f18-4781-8d09-322d8659b6a1" alt=""></div>
+          Skill
+        </div>
+        <div class="toolbar-item">
+          <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/646f0bb3-7d8c-488e-b9a1-8c2d7476b69c" alt=""></div>
+          MCP
+        </div>
+        <div class="toolbar-item">
+          <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/a5d060b5-e2ec-4902-98ea-ab391cc205bf" alt=""></div>
+          Knowledge
+        </div>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-section" style="padding:6px">
+        <div class="airo-widget">
+          <div class="airo-mark">
+            <img src="https://www.figma.com/api/mcp/asset/3f00cda8-fa93-4d2d-92fd-ba73f3db522b" alt="">
+          </div>
+          Ask AIRO
+        </div>
+      </div>
+    </div>
+
+    <div class="zoom-controls">
+      <div class="zoom-section">
+        <div class="zoom-btn">
+          <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/a5d060b5-e2ec-4902-98ea-ab391cc205bf" alt="−" style="opacity:0.5"></div>
+        </div>
+        <div class="zoom-btn" style="min-width:56px;justify-content:center">100%</div>
+        <div class="zoom-btn">
+          <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/a42e5f80-9db4-43c5-86d5-675813b447f5" alt="+"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /recipe-editor -->
+</body>
+</html>
