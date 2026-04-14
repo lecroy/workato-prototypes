@@ -41,8 +41,8 @@
 }
 
 html, body {
-  width: 1920px;
-  height: 1080px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   font-family: 'Source Sans 3', sans-serif;
   background: #f0f2f5;
@@ -55,8 +55,6 @@ html, body {
   position: relative;
   width: 100%;
   height: 100%;
-  border: 2px solid var(--border-gloss);
-  border-radius: 16px 16px 0 0;
   overflow: hidden;
   background-image:
     linear-gradient(180deg, rgba(229,234,241,0.2) 0%, rgba(200,200,255,0.2) 100%),
@@ -141,8 +139,18 @@ html, body {
 ───────────────────────────────────────────── */
 .re-canvas {
   position: absolute;
-  inset: 0 0 68px 0;   /* leave room for footer */
-  overflow: auto;
+  inset: 0 0 68px 0;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+.re-canvas.panning { cursor: grabbing; }
+
+.canvas-transform {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* the entire workflow sits inside this absolute box */
@@ -399,6 +407,7 @@ html, body {
 
   <!-- ── CANVAS ─────────────────────────────────────────────── -->
   <div class="re-canvas">
+    <div class="canvas-transform">
     <div class="workflow">
 
       <!-- LARGE INSTRUCTION CARD  left=488 top=3 w=608 -->
@@ -637,6 +646,7 @@ html, body {
       </div>
 
     </div><!-- /workflow -->
+    </div><!-- /canvas-transform -->
   </div><!-- /re-canvas -->
 
   <!-- ── FOOTER ─────────────────────────────────────────────── -->
@@ -673,11 +683,11 @@ html, body {
 
     <div class="zoom-controls">
       <div class="zoom-section">
-        <div class="zoom-btn">
+        <div class="zoom-btn" id="zoom-out">
           <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/a5d060b5-e2ec-4902-98ea-ab391cc205bf" alt="−" style="opacity:0.5"></div>
         </div>
-        <div class="zoom-btn" style="min-width:56px;justify-content:center">100%</div>
-        <div class="zoom-btn">
+        <div class="zoom-btn" id="zoom-level" style="min-width:56px;justify-content:center">100%</div>
+        <div class="zoom-btn" id="zoom-in">
           <div class="toolbar-icon"><img src="https://www.figma.com/api/mcp/asset/a42e5f80-9db4-43c5-86d5-675813b447f5" alt="+"></div>
         </div>
       </div>
@@ -685,5 +695,85 @@ html, body {
   </div>
 
 </div><!-- /recipe-editor -->
+
+<script>
+(function () {
+  const canvas = document.querySelector('.re-canvas');
+  const xform  = document.querySelector('.canvas-transform');
+  const lvl    = document.getElementById('zoom-level');
+
+  let pan   = { x: 0, y: 0 };
+  let scale = 1;
+
+  function apply() {
+    xform.style.transform = `translate(${pan.x}px,${pan.y}px) scale(${scale})`;
+    lvl.textContent = Math.round(scale * 100) + '%';
+  }
+
+  // Centre content on load
+  window.addEventListener('load', function () {
+    const r = canvas.getBoundingClientRect();
+    // workflow content is ~1772px wide (136 left + 1500 + 136 right padding)
+    const contentW = 1772, contentH = 1352;
+    const s = Math.min(r.width / contentW, r.height / contentH, 1);
+    scale = parseFloat(s.toFixed(2));
+    pan.x = (r.width  - contentW * scale) / 2;
+    pan.y = (r.height - contentH * scale) / 2;
+    apply();
+  });
+
+  // ── Pan ────────────────────────────────────────────────────────
+  let dragging = false, start = {}, origin = {};
+
+  canvas.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    dragging = true;
+    start  = { x: e.clientX, y: e.clientY };
+    origin = { x: pan.x, y: pan.y };
+    canvas.classList.add('panning');
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', function (e) {
+    if (!dragging) return;
+    pan.x = origin.x + e.clientX - start.x;
+    pan.y = origin.y + e.clientY - start.y;
+    apply();
+  });
+
+  window.addEventListener('mouseup', function () {
+    dragging = false;
+    canvas.classList.remove('panning');
+  });
+
+  // ── Wheel zoom (toward cursor) ─────────────────────────────────
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const newScale = Math.min(Math.max(scale * factor, 0.1), 4);
+    const r  = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    pan.x = mx - (mx - pan.x) * (newScale / scale);
+    pan.y = my - (my - pan.y) * (newScale / scale);
+    scale = newScale;
+    apply();
+  }, { passive: false });
+
+  // ── Zoom buttons (toward centre) ──────────────────────────────
+  function zoomBy(factor) {
+    const r  = canvas.getBoundingClientRect();
+    const cx = r.width / 2, cy = r.height / 2;
+    const newScale = Math.min(Math.max(scale * factor, 0.1), 4);
+    pan.x = cx - (cx - pan.x) * (newScale / scale);
+    pan.y = cy - (cy - pan.y) * (newScale / scale);
+    scale = newScale;
+    apply();
+  }
+
+  document.getElementById('zoom-in') .addEventListener('click', function () { zoomBy(1.2); });
+  document.getElementById('zoom-out').addEventListener('click', function () { zoomBy(1 / 1.2); });
+})();
+</script>
 </body>
 </html>
